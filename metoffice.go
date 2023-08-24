@@ -10,34 +10,76 @@ import (
 	"golang.org/x/net/html"
 	//"encoding/csv"
 	"strings"
+	"strconv"
 )
 
-func DoThing() {
+// Function to parse the MetOffice HTML into a map of maps of weatherFormat structs, and an array of the avalible dates
+func ParseHTML() (map[int]map[int]weatherFormat, [7]string) {
+	// Array for all the day names
+	var dayNames = [7]string{}
+	// final JSON to return
+	var finalJSON map[int]map[int]weatherFormat = make(map[int]map[int]weatherFormat)
+	// Open file and parse HTML
 	homeDir, _ := os.UserHomeDir()
 	dat, err := os.ReadFile(homeDir + FILE_PATH + "output.html")
 	if err != nil {
 		panic(err)
 	}
-	
 	doc, err := html.Parse(strings.NewReader(string(dat)))
 	if err != nil {
 		panic(err)
 	}
+	var curDay int = 0 // Parse the 7 day headers to get the string (e.g. Today (24 August 2023))
 	var daysParsed int = 0 // There are 8 tables but only 7 days, so need to return before borking
+	// Iterate through the HTML and parse it as needed
 	var f func(*html.Node)
 	f = func(n *html.Node) {
+		// Gets the avalible dates
+		if n.Type == html.ElementNode && n.Data == "div" {
+			if len(n.Attr) == 3 { // Check for the string "daynHeader" where n is 0-6
+				if n.Attr[1].Val == "day" + strconv.Itoa(curDay) + "Header" {
+					// Get the date in format yymmdd as an integer to use as key for map
+					dateNum, _ := strconv.Atoi(strings.ReplaceAll(n.Attr[0].Val, "-", "")[2:])
+					// Get day name (e.g. "Today", "Thursday")
+					var dayName string = n.FirstChild.NextSibling.FirstChild.NextSibling.FirstChild.NextSibling.FirstChild.FirstChild.Data
+					// Get full day name (e.g. "24 August 2023")
+					var fullDayName string = n.FirstChild.NextSibling.FirstChild.NextSibling.FirstChild.NextSibling.FirstChild.FirstChild.NextSibling.FirstChild.Data
+					fmt.Println("HERE")
+					fmt.Println(dateNum)
+					fmt.Printf("%s%s\n", dayName, fullDayName)
+					// Add correctly formatted day names to the dayNames array (in format "Today (24 August 2023)")
+					dayNames[curDay] = dayName + fullDayName
+					// Initialse the day map using dateNum as the key
+					finalJSON[dateNum] = make(map[int]weatherFormat)
+					// Advance to next day
+					curDay++
+				}
+			}
+		}
+		// Parse the tables
 		if n.Type == html.ElementNode && n.Data == "table" {
-			fmt.Println("NEW TABLE")
+			var timeSlots = []int{}
+			//fmt.Println("NEW TABLE")
 			daysParsed++ // Return if done all 8 days
 			if daysParsed > 7 {
 				return
 			}
+			
 			// Get node for header of table
 			tHead := n.FirstChild.NextSibling
-			_ = tHead.FirstChild
-			// Parse header row and get items out
-			var curRowNum int = 0 // To keep track of which row as each require different parsing
+			//fmt.Printf("%+v\n", tHead.FirstChild.NextSibling.FirstChild.NextSibling.NextSibling.NextSibling.Attr[1].Val)
+			// Iterate through header cells and get the time
+			curHeaderCell := tHead.FirstChild.NextSibling.FirstChild.NextSibling.NextSibling
+			for curHeaderCell.NextSibling != nil {
+				if curHeaderCell.Data == "th" {
+					// Gets the time in format HHMM
+					fmt.Println(strings.ReplaceAll(curHeaderCell.Attr[1].Val, ":", ""))
+				}
+				curHeaderCell = curHeaderCell.NextSibling
+			}
 			
+			// Parse the main table body
+			var curRowNum int = 0 // To keep track of which row as each require different parsing
 			// Get body and first row
 			tBody := tHead.NextSibling.NextSibling
 			curRow := tBody.FirstChild
@@ -60,7 +102,11 @@ func DoThing() {
 								fmt.Printf("%s\n", curCell.FirstChild.NextSibling.Attr[0].Val)
 							case curRowNum == 4 : // Feels Like Temperature
 								fmt.Println("Currently in: 4 (Feels Like Temperature)")
-								fmt.Printf("%s\n", curCell.Attr[2].Val)
+								if curCell.Attr[2].Key == "data-value" {
+									fmt.Println(curCell.Attr[2].Val)
+								} else {
+									fmt.Println(curCell.Attr[1].Val)
+								}
 							case curRowNum == 5: // Wind direction and speed
 								fmt.Println("Currently in: 5 (Wind Direction and Speed)")
 								fmt.Printf("%s\n", curCell.FirstChild.NextSibling.FirstChild.NextSibling.Attr[2].Val)
@@ -90,4 +136,6 @@ func DoThing() {
 		}
 	}
 	f(doc)
+	// Return the weather data and array of day names
+	return finalJSON, dayNames
 }

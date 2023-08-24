@@ -14,20 +14,27 @@ import (
 	"strconv"
 )
 
-
-
+// Tidy up the JSON, reformatting it and removing unneeded information
 func tidyJSON(inputJSON BBCWeatherFormat) map[int]map[int]weatherFormat {
+	// Create the map
 	var finalJSON map[int]map[int]weatherFormat = make(map[int]map[int]weatherFormat)
 	//finalJSON["230824"] = make(map[string]weatherFormat)
 	//finalJSON["230824"]["1400"] = testStruct{"thingA", 1276}
-	
+	//thing, _ := json.MarshalIndent(inputJSON, "", "  ")
+	//fmt.Println(string(thing))
+	// Iterate through all the days
 	for _, day := range inputJSON.Data.Forecasts {
+		// Iterate through all the time slots
 		for _, timeSlot := range day.Detailed.Reports {
+			// Get the current date in format yymmdd as an int
 			curDate, _ := strconv.Atoi(strings.ReplaceAll(timeSlot.LocalDate, "-", "")[2:])
+			// Get the current time in format HHMM as an int
 			curTime, _ := strconv.Atoi(timeSlot.Timeslot[0:2] + timeSlot.Timeslot[3:5])
+			// Use current date to initialise parts of map
 			if finalJSON[curDate] == nil {
 				finalJSON[curDate] = make(map[int]weatherFormat)
 			}
+			// Create the struct to add and populate it
 			var structToAdd weatherFormat = weatherFormat{
 				EnhancedWeatherDescription: timeSlot.EnhancedWeatherDescription,
 				ExtendedWeatherType: timeSlot.ExtendedWeatherType,
@@ -45,27 +52,33 @@ func tidyJSON(inputJSON BBCWeatherFormat) map[int]map[int]weatherFormat {
 				WindDirectionAbbreviation: timeSlot.WindDirectionAbbreviation,
 				WindSpeedMph: timeSlot.WindSpeedMph,
 			}
+			// Add the struct at the correct time slot
 			finalJSON[curDate][curTime] = structToAdd
 		}
 	}
+	// return the tidied JSON
 	return finalJSON
 }	
 
+// Get the JSON out of BBC Weather HTML
 func GetJSON() map[int]map[int]weatherFormat {
 	//fmt.Println("In bbc.go")
+	// Initialise the string to fill with JSON
 	var finalJSONString string = ""
+	// Get homedir and read bbc.html, and parse HTML
 	homeDir, _ := os.UserHomeDir()
 	dat, err := os.ReadFile(homeDir + FILE_PATH + "bbc.html")
 	if err != nil {
 		panic(err)
 	}
-	
 	doc, err := html.Parse(strings.NewReader(string(dat)))
 	if err != nil {
 		panic(err)
 	}
+	// Function to parse HTML
 	var f func(*html.Node)
 	f = func(n *html.Node) {
+		// Get the JSON
 		if n.Data == "script" {
 			if len(n.Attr) > 1 {
 				if n.Attr[1].Key == "data-state-id" {
@@ -80,10 +93,11 @@ func GetJSON() map[int]map[int]weatherFormat {
 	}
 	f(doc)
 	
-	// Format into JSON
+	// Format string into JSON
 	var formattedJSON BBCWeatherFormat
 	if err := json.Unmarshal([]byte(finalJSONString), &formattedJSON); err != nil {
 		panic(err)
 	}
+	// Tidy the JSON up and return it to main
 	return tidyJSON(formattedJSON)
 }
