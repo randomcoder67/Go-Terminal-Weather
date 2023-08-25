@@ -14,11 +14,12 @@ import (
 )
 
 // Function to parse the MetOffice HTML into a map of maps of weatherFormat structs, and an array of the avalible dates
-func ParseHTML() (map[int]map[int]weatherFormat, [7]string) {
+func ParseHTML() (map[int]map[string]weatherFormat, [7]string) {
 	// Array for all the day names
 	var dayNames = [7]string{}
+	var dateNums = [7]int{}
 	// final JSON to return
-	var finalJSON map[int]map[int]weatherFormat = make(map[int]map[int]weatherFormat)
+	var finalJSON map[int]map[string]weatherFormat = make(map[int]map[string]weatherFormat)
 	// Open file and parse HTML
 	homeDir, _ := os.UserHomeDir()
 	dat, err := os.ReadFile(homeDir + FILE_PATH + "output.html")
@@ -44,13 +45,11 @@ func ParseHTML() (map[int]map[int]weatherFormat, [7]string) {
 					var dayName string = n.FirstChild.NextSibling.FirstChild.NextSibling.FirstChild.NextSibling.FirstChild.FirstChild.Data
 					// Get full day name (e.g. "24 August 2023")
 					var fullDayName string = n.FirstChild.NextSibling.FirstChild.NextSibling.FirstChild.NextSibling.FirstChild.FirstChild.NextSibling.FirstChild.Data
-					fmt.Println("HERE")
-					fmt.Println(dateNum)
-					fmt.Printf("%s%s\n", dayName, fullDayName)
 					// Add correctly formatted day names to the dayNames array (in format "Today (24 August 2023)")
 					dayNames[curDay] = dayName + fullDayName
 					// Initialse the day map using dateNum as the key
-					finalJSON[dateNum] = make(map[int]weatherFormat)
+					finalJSON[dateNum] = make(map[string]weatherFormat)
+					dateNums[curDay] = dateNum
 					// Advance to next day
 					curDay++
 				}
@@ -58,7 +57,7 @@ func ParseHTML() (map[int]map[int]weatherFormat, [7]string) {
 		}
 		// Parse the tables
 		if n.Type == html.ElementNode && n.Data == "table" {
-			var timeSlots = []int{}
+			var timeSlots = []string{}
 			//fmt.Println("NEW TABLE")
 			daysParsed++ // Return if done all 8 days
 			if daysParsed > 7 {
@@ -73,13 +72,18 @@ func ParseHTML() (map[int]map[int]weatherFormat, [7]string) {
 			for curHeaderCell.NextSibling != nil {
 				if curHeaderCell.Data == "th" {
 					// Gets the time in format HHMM
-					fmt.Println(strings.ReplaceAll(curHeaderCell.Attr[1].Val, ":", ""))
+					timeSlot := strings.ReplaceAll(curHeaderCell.Attr[1].Val, ":", "")
+					timeSlots = append(timeSlots, timeSlot)
+					var weatherA weatherFormat
+					finalJSON[dateNums[daysParsed-1]][timeSlot] = weatherA  
 				}
 				curHeaderCell = curHeaderCell.NextSibling
 			}
 			
 			// Parse the main table body
 			var curRowNum int = 0 // To keep track of which row as each require different parsing
+			var currentDateKey int = dateNums[daysParsed-1]
+			fmt.Println(currentDateKey)
 			// Get body and first row
 			tBody := tHead.NextSibling.NextSibling
 			curRow := tBody.FirstChild
@@ -88,20 +92,25 @@ func ParseHTML() (map[int]map[int]weatherFormat, [7]string) {
 				if curRow.Data == "tr" { // If the sibling is another row, process it
 					curRowNum++
 					curCell := curRow.FirstChild // Get the first cell of the row
-					for curCell.NextSibling != nil { // Iterate through cells 
+					var atWhichTime int = 0
+					for curCell.NextSibling != nil { // Iterate through cells
 						if curCell.Data == "td" { // If sibling is a cell
 							switch { // Parse according to row number
 							case curRowNum == 1: // Weather Symbol
 								fmt.Println("Currently in: 1 (Weather Symbol)")
+								fmt.Println(timeSlots[atWhichTime])
 								fmt.Println(curCell.FirstChild.NextSibling.Attr[3].Val)
 							case curRowNum == 2: // Chance of Precipitation
 								fmt.Println("Currently in: 2 (Chance of rain)")
+								fmt.Println(timeSlots[atWhichTime])
 								fmt.Printf("%s\n", strings.Trim(curCell.FirstChild.Data, "\n"))
 							case curRowNum == 3: // Actual Temperature
 								fmt.Println("Currently in: 3 (Actual Temperature)")
+								fmt.Println(timeSlots[atWhichTime])
 								fmt.Printf("%s\n", curCell.FirstChild.NextSibling.Attr[0].Val)
 							case curRowNum == 4 : // Feels Like Temperature
 								fmt.Println("Currently in: 4 (Feels Like Temperature)")
+								fmt.Println(timeSlots[atWhichTime])
 								if curCell.Attr[2].Key == "data-value" {
 									fmt.Println(curCell.Attr[2].Val)
 								} else {
@@ -109,21 +118,27 @@ func ParseHTML() (map[int]map[int]weatherFormat, [7]string) {
 								}
 							case curRowNum == 5: // Wind direction and speed
 								fmt.Println("Currently in: 5 (Wind Direction and Speed)")
+								fmt.Println(timeSlots[atWhichTime])
 								fmt.Printf("%s\n", curCell.FirstChild.NextSibling.FirstChild.NextSibling.Attr[2].Val)
 								fmt.Printf("%s\n", strings.Trim(curCell.FirstChild.NextSibling.FirstChild.NextSibling.NextSibling.NextSibling.FirstChild.Data, "\n"))
 							case curRowNum == 6: // Wind Gust
 								fmt.Println("Currently in: 6 (Wind Gust)")
+								fmt.Println(timeSlots[atWhichTime])
 								fmt.Printf("%s\n", curCell.FirstChild.NextSibling.FirstChild.Data)
 							case curRowNum == 7: // Visibility
 								fmt.Println("Currently in: 7 (Visibility)")
+								fmt.Println(timeSlots[atWhichTime])
 								fmt.Printf("%s\n", curCell.FirstChild.NextSibling.FirstChild.Data)
 							case curRowNum == 8: // Humidity
 								fmt.Println("Currently in: 8 (Humidity)")
+								fmt.Println(timeSlots[atWhichTime])
 								fmt.Printf("%s\n", strings.Trim(curCell.FirstChild.Data, "\n"))
 							case curRowNum == 9: // UV
 								fmt.Println("Currently in: 9 (UV)")
+								fmt.Println(timeSlots[atWhichTime])
 								fmt.Printf("%+v\n", curCell.FirstChild.NextSibling.Attr[4].Val)
 							}
+							atWhichTime++
 						}
 						curCell = curCell.NextSibling
 					} 

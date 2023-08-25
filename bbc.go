@@ -15,9 +15,9 @@ import (
 )
 
 // Tidy up the JSON, reformatting it and removing unneeded information
-func tidyJSON(inputJSON BBCWeatherFormat) map[int]map[int]weatherFormat {
+func tidyJSON(inputJSON BBCWeatherFormat) map[int]map[string]weatherFormat {
 	// Create the map
-	var finalJSON map[int]map[int]weatherFormat = make(map[int]map[int]weatherFormat)
+	var finalJSON map[int]map[string]weatherFormat = make(map[int]map[string]weatherFormat)
 	//finalJSON["230824"] = make(map[string]weatherFormat)
 	//finalJSON["230824"]["1400"] = testStruct{"thingA", 1276}
 	//thing, _ := json.MarshalIndent(inputJSON, "", "  ")
@@ -29,10 +29,10 @@ func tidyJSON(inputJSON BBCWeatherFormat) map[int]map[int]weatherFormat {
 			// Get the current date in format yymmdd as an int
 			curDate, _ := strconv.Atoi(strings.ReplaceAll(timeSlot.LocalDate, "-", "")[2:])
 			// Get the current time in format HHMM as an int
-			curTime, _ := strconv.Atoi(timeSlot.Timeslot[0:2] + timeSlot.Timeslot[3:5])
+			curTime := timeSlot.Timeslot[0:2] + timeSlot.Timeslot[3:5]
 			// Use current date to initialise parts of map
 			if finalJSON[curDate] == nil {
-				finalJSON[curDate] = make(map[int]weatherFormat)
+				finalJSON[curDate] = make(map[string]weatherFormat)
 			}
 			// Create the struct to add and populate it
 			var structToAdd weatherFormat = weatherFormat{
@@ -61,7 +61,7 @@ func tidyJSON(inputJSON BBCWeatherFormat) map[int]map[int]weatherFormat {
 }	
 
 // Get the JSON out of BBC Weather HTML
-func GetJSON() map[int]map[int]weatherFormat {
+func GetJSON() map[int]map[string]weatherFormat {
 	//fmt.Println("In bbc.go")
 	// Initialise the string to fill with JSON
 	var finalJSONString string = ""

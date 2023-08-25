@@ -4,6 +4,7 @@ import (
 	"fmt"
 	//"strconv"
 	//"strings"
+	"encoding/json"
 )
 
 func main() {
@@ -24,5 +25,8 @@ func main() {
 	}
 	metofficeJSON, dayNames := ParseHTML()
 	_ = metofficeJSON
+	thingA, _ := json.MarshalIndent(bbcJSON, "", "  ")
+	//fmt.Println(string(thingA))
+	_ = thingA
 	_ = dayNames
 }
