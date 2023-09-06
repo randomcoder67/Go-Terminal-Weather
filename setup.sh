@@ -28,7 +28,7 @@ else
 	fi
 	echo "$locLocation"
 	go mod tidy
-	if go build -o weatherGo main.go bbcWeather.go metoffice.go definitions.go web.go display.go userSetValues.go; then
+	if go build -o goWeather main.go bbcWeather.go metoffice.go definitions.go web.go display.go userSetValues.go; then
 		echo "Compile complete"
 		rm userSetValues.go
 	else
