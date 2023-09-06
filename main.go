@@ -2,16 +2,66 @@ package main
 
 import (
 	"fmt"
-	//"strconv"
-	//"strings"
-	"encoding/json"
+	"encoding/csv"
+	"os"
+	"strings"
+	"bufio"
+	"strconv"
 )
 
+
 func main() {
-	//fmt.Println("In main.go")
-	bbcJSON := GetJSON()
-	fmt.Println("Testing")
-	for _, day := range bbcJSON {
+	fmt.Println("In main.go")
+	// Get home dir
+	homeDir, _ = os.UserHomeDir()
+	// Read locations file 
+	dat, err := os.ReadFile(homeDir + LOCATIONS_FILE_LOC)
+	if err != nil {
+		panic(err)
+	}
+	// Parse as csv
+	r := csv.NewReader(strings.NewReader(string(dat)))
+	r.Comma = '|'
+	locations, _ := r.ReadAll()
+	
+	var metofficeCode string
+	var bbcWeatherCode string
+	// Display options to user if more than one, otherwise use only entry
+	if len(locations) > 1 {
+		// Print info to user
+		fmt.Println("Welcome to Go Weather, select your desired location:")
+		for i, location := range locations {
+			fmt.Printf("%d. %s\n", i+1, location[0])
+		}
+		// Get input
+		in := bufio.NewReader(os.Stdin)
+		givenIndex, err := in.ReadString('\n')
+		// Convert to integer
+		givenIndexInt, err := strconv.Atoi(strings.ReplaceAll(givenIndex, "\n", ""))
+		// Check input was valid
+		if err != nil {
+			fmt.Println("Error, invalid input")
+			os.Exit(1)
+		}
+		// And in range
+		if givenIndexInt > len(locations) || givenIndexInt == 0 {
+			fmt.Println("Error, input out of range")
+			os.Exit(1)
+		}
+		// Get codes
+		metofficeCode = locations[givenIndexInt-1][1]
+		bbcWeatherCode = locations[givenIndexInt-1][2]
+	} else {
+		metofficeCode = locations[0][1]
+		bbcWeatherCode = locations[0][2]
+	}
+	fmt.Println(metofficeCode, bbcWeatherCode)
+	metofficeHTML, bbcWeatherHTML := RetrieveHTML(metofficeCode, bbcWeatherCode)
+	
+	metofficeJSON, dayNames := GetMetOfficeFormatted(metofficeHTML)
+	bbcWeatherJSON := GetBBCWeatherFormatted(bbcWeatherHTML)
+	/*
+	for _, day := range bbcWeatherJSON {
 		for _, timeSlot := range day {
 			_ = timeSlot
 			//fmt.Println(timeSlot.WeatherType)
@@ -23,10 +73,14 @@ func main() {
 			//fmt.Printf("%+v\n", testThing[dateIndex][timeSlotIndex])
 		}
 	}
-	metofficeJSON, dayNames := ParseHTML()
-	_ = metofficeJSON
-	thingA, _ := json.MarshalIndent(bbcJSON, "", "  ")
+	*/
+	//_ = metofficeJSON
+	//thingA, _ := json.MarshalIndent(metofficeJSON, "", "  ")
 	//fmt.Println(string(thingA))
-	_ = thingA
-	_ = dayNames
+	//_ = thingA
+	//_ = dayNames
+	//fmt.Printf("%+v\n", metofficeJSON[230803]["0100"].Date)
+	//fmt.Println(bbcWeatherJSON)
+	//os.Exit(0)
+	DoDisplay(metofficeJSON, bbcWeatherJSON, dayNames)
 }

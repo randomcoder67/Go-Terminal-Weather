@@ -1,17 +1,11 @@
 package main
 
 import (
-	//"encoding/json"
-	//"fmt"
-	//"io/ioutil"
-	"os"
-	//"sort"
-	//"net/http"
 	"golang.org/x/net/html"
-	//"encoding/csv"
 	"strings"
 	"encoding/json"
-	"strconv"
+	"fmt"
+	//"strconv"
 )
 
 // Tidy up the JSON, reformatting it and removing unneeded information
@@ -23,16 +17,16 @@ func tidyJSON(inputJSON BBCWeatherFormat) map[int]map[string]weatherFormat {
 	//thing, _ := json.MarshalIndent(inputJSON, "", "  ")
 	//fmt.Println(string(thing))
 	// Iterate through all the days
-	for _, day := range inputJSON.Data.Forecasts {
+	for i, day := range inputJSON.Data.Forecasts {
 		// Iterate through all the time slots
 		for _, timeSlot := range day.Detailed.Reports {
 			// Get the current date in format yymmdd as an int
-			curDate, _ := strconv.Atoi(strings.ReplaceAll(timeSlot.LocalDate, "-", "")[2:])
+			//curDate, _ := strconv.Atoi(strings.ReplaceAll(timeSlot.LocalDate, "-", "")[2:])
 			// Get the current time in format HHMM as an int
 			curTime := timeSlot.Timeslot[0:2] + timeSlot.Timeslot[3:5]
 			// Use current date to initialise parts of map
-			if finalJSON[curDate] == nil {
-				finalJSON[curDate] = make(map[string]weatherFormat)
+			if finalJSON[i] == nil {
+				finalJSON[i] = make(map[string]weatherFormat)
 			}
 			// Create the struct to add and populate it
 			var structToAdd weatherFormat = weatherFormat{
@@ -46,14 +40,14 @@ func tidyJSON(inputJSON BBCWeatherFormat) map[int]map[string]weatherFormat {
 				PrecipitationProbabilityInPercent: timeSlot.PrecipitationProbabilityInPercent,
 				TemperatureC: timeSlot.TemperatureC,
 				TimeslotLength: timeSlot.TimeslotLength,
-				Visibility: timeSlot.Visibility,
+				Visibility: bbcWeatherVisibility[timeSlot.Visibility],
 				WeatherType: timeSlot.WeatherType,
 				WeatherTypeText: timeSlot.WeatherTypeText,
 				WindDirectionAbbreviation: timeSlot.WindDirectionAbbreviation,
 				WindSpeedMph: timeSlot.WindSpeedMph,
 			}
 			// Add the struct at the correct time slot
-			finalJSON[curDate][curTime] = structToAdd
+			finalJSON[i][curTime] = structToAdd
 		}
 	}
 	// return the tidied JSON
@@ -61,17 +55,11 @@ func tidyJSON(inputJSON BBCWeatherFormat) map[int]map[string]weatherFormat {
 }	
 
 // Get the JSON out of BBC Weather HTML
-func GetJSON() map[int]map[string]weatherFormat {
-	//fmt.Println("In bbc.go")
+func GetBBCWeatherFormatted(bbcWeatherHTML []byte) map[int]map[string]weatherFormat {
+	fmt.Println("In bbcWeather.go")
 	// Initialise the string to fill with JSON
 	var finalJSONString string = ""
-	// Get homedir and read bbc.html, and parse HTML
-	homeDir, _ := os.UserHomeDir()
-	dat, err := os.ReadFile(homeDir + FILE_PATH + "bbc.html")
-	if err != nil {
-		panic(err)
-	}
-	doc, err := html.Parse(strings.NewReader(string(dat)))
+	doc, err := html.Parse(strings.NewReader(string(bbcWeatherHTML)))
 	if err != nil {
 		panic(err)
 	}

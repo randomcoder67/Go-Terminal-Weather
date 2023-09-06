@@ -1,35 +1,22 @@
 package main
 
 import (
-	//"encoding/json"
 	"fmt"
-	//"io/ioutil"
-	"os"
-	//"sort"
-	//"net/http"
 	"golang.org/x/net/html"
-	//"encoding/csv"
 	"strings"
 	"strconv"
 	"math"
 )
 
-var previousTimeSlot int
-
 // Function to parse the MetOffice HTML into a map of maps of weatherFormat structs, and an array of the avalible dates
-func ParseHTML() (map[int]map[string]weatherFormat, [7]string) {
+func GetMetOfficeFormatted(metofficeHTML []byte) (map[int]map[string]weatherFormat, [7]string) {
+	fmt.Println("In metoffice.go")
 	// Array for all the day names
 	var dayNames = [7]string{}
 	var dateNums = [7]int{}
 	// final JSON to return
 	var finalJSON map[int]map[string]weatherFormat = make(map[int]map[string]weatherFormat)
-	// Open file and parse HTML
-	homeDir, _ := os.UserHomeDir()
-	dat, err := os.ReadFile(homeDir + FILE_PATH + "output.html")
-	if err != nil {
-		panic(err)
-	}
-	doc, err := html.Parse(strings.NewReader(string(dat)))
+	doc, err := html.Parse(strings.NewReader(string(metofficeHTML)))
 	if err != nil {
 		panic(err)
 	}
@@ -51,7 +38,7 @@ func ParseHTML() (map[int]map[string]weatherFormat, [7]string) {
 					// Add correctly formatted day names to the dayNames array (in format "Today (24 August 2023)")
 					dayNames[curDay] = dayName + fullDayName
 					// Initialse the day map using dateNum as the key
-					finalJSON[dateNum] = make(map[string]weatherFormat)
+					finalJSON[curDay] = make(map[string]weatherFormat)
 					dateNums[curDay] = dateNum
 					// Advance to next day
 					curDay++
@@ -78,18 +65,19 @@ func ParseHTML() (map[int]map[string]weatherFormat, [7]string) {
 					timeSlot := strings.ReplaceAll(curHeaderCell.Attr[1].Val, ":", "")
 					timeSlots = append(timeSlots, timeSlot)
 					var weatherA weatherFormat
-					finalJSON[dateNums[daysParsed-1]][timeSlot] = weatherA  
+					//fmt.Println(curDay)
+					finalJSON[daysParsed-1][timeSlot] = weatherA  
 				}
 				curHeaderCell = curHeaderCell.NextSibling
 			}
-			fmt.Println(timeSlots)
+			//fmt.Println(timeSlots)
 			
 			
 			
 			// Parse the main table body
 			var curRowNum int = 0 // To keep track of which row as each require different parsing
 			var currentDateKey int = dateNums[daysParsed-1]
-			fmt.Println(currentDateKey)
+			//fmt.Println(currentDateKey)
 			
 			// Create array to hold struct and add empty structs equal to the number of time slots in the current day
 			var tempStructHolder = []weatherFormat{}
@@ -188,7 +176,7 @@ func ParseHTML() (map[int]map[string]weatherFormat, [7]string) {
 			//fmt.Printf("%+v\n", tempStructHolder[0])
 			for i, timeSlot := range timeSlots {
 				//fmt.Println(i, timeSlot)
-				finalJSON[currentDateKey][timeSlot] = tempStructHolder[i]
+				finalJSON[daysParsed-1][timeSlot] = tempStructHolder[i]
 			}
 		}
 		for c := n.FirstChild; c != nil; c = c.NextSibling {

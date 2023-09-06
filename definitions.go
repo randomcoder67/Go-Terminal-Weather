@@ -5,11 +5,26 @@ import (
 )
 
 const FILE_PATH string = "/Programs/myRepos/goWeather/notPartOfFinal/"
+
+const LOCATIONS_FILE_LOC string = "/Programs/output/updated/weatherLocations.csv"
+
+const UP_ARROWS string = "^^^^^"
+const DOWN_ARROWS string = "vvvvv"
 // /home/user string, initailised in main.go
 var homeDir string
 
 // Row Labels
-var rowLabels = [10]string{"Time", "Weather Symbol", "Change of Precipitation", "Temperature (°C)", "Feels like temperature (°C)", "Wind direction and speed", "Wind gust", "Visibility", "Humidity", "UV"}
+var rowLabels = [10]string{"Time", "Weather Symbol", "Chance of Precipitation", "Temperature (°C)", "Feels Like Temperature (°C)", "Wind Direction and Speed", "Wind Gust", "Visibility", "Humidity", "Similarity"}
+
+// BBC Weather visibility full name to MetOffice abbreviated name
+var bbcWeatherVisibility = map[string]string {
+	"Very poor": "VP",
+	"Poor": "P",
+	"Moderate": "M",
+	"Good": "G",
+	"Very good": "VG",
+	"Excellent": "E",
+}
 
 // Weather symbols
 var weatherSymbols = map[int]string{
@@ -44,8 +59,8 @@ var weatherSymbols = map[int]string{
 	28: " ",
 	29: " ",
 	30: "",
-	31: "",
-	32: " ",
+	31: " ",
+	32: "",
 }
 
 // Met Office weather name to BBC weather numbers (Not sure if MetOffice has Sandstorm, Hazy or Tropical storm but added them just incase)
@@ -107,39 +122,39 @@ var windDirection = map[string]string{
 
 // Colours for the weather symbols, tried to make the colours so you could get an idea of the weather by just glancing at the symbol. Yellow = good and sunny, white = okay and cloudy/night, blue = wet, magenta = cold and snowy and red = danger (thunder or fog)
 var weatherColours = map[int]string{
-	0: "colorWhite",
-	1: "colorYellow",
-	2: "colorWhite",
-	3: "colorYellow",
-	4: "colorRed",
-	5: "colorBlue",
-	6: "colorRed",
-	7: "colorWhite",
-	8: "colorWhite",
-	9: "colorBlue",
-	10: "colorBlue",
-	11: "colorBlue",
-	12: "colorBlue",
-	13: "colorBlue",
-	14: "colorBlue",
-	15: "colorBlue",
-	16: "colorMagenta",
-	17: "colorMagenta",
-	18: "colorMagenta",
-	19: "colorBlue",
-	20: "colorBlue",
-	21: "colorBlue",
-	22: "colorMagenta",
-	23: "colorMagenta",
-	24: "colorMagenta",
-	25: "colorMagenta",
-	26: "colorMagenta",
-	27: "colorMagenta",
-	28: "colorRed",
-	29: "colorRed",
-	30: "colorRed",
-	31: "colorRed",
-	32: "colorRed",
+	0: "white",
+	1: "yellow",
+	2: "white",
+	3: "yellow",
+	4: "red",
+	5: "blue",
+	6: "red",
+	7: "white",
+	8: "white",
+	9: "blue",
+	10: "blue",
+	11: "blue",
+	12: "blue",
+	13: "blue",
+	14: "blue",
+	15: "blue",
+	16: "magenta",
+	17: "magenta",
+	18: "magenta",
+	19: "blue",
+	20: "blue",
+	21: "blue",
+	22: "magenta",
+	23: "magenta",
+	24: "magenta",
+	25: "magenta",
+	26: "magenta",
+	27: "magenta",
+	28: "red",
+	29: "red",
+	30: "red",
+	31: "red",
+	32: "red",
 }
 
 // Credit: I used this website to convert the JSON into a struct. https://mholt.github.io/json-to-go/ 
