@@ -11,7 +11,10 @@ import (
 	//"encoding/csv"
 	"strings"
 	"strconv"
+	"math"
 )
+
+var previousTimeSlot int
 
 // Function to parse the MetOffice HTML into a map of maps of weatherFormat structs, and an array of the avalible dates
 func ParseHTML() (map[int]map[string]weatherFormat, [7]string) {
@@ -79,11 +82,23 @@ func ParseHTML() (map[int]map[string]weatherFormat, [7]string) {
 				}
 				curHeaderCell = curHeaderCell.NextSibling
 			}
+			fmt.Println(timeSlots)
+			
+			
 			
 			// Parse the main table body
 			var curRowNum int = 0 // To keep track of which row as each require different parsing
 			var currentDateKey int = dateNums[daysParsed-1]
 			fmt.Println(currentDateKey)
+			
+			// Create array to hold struct and add empty structs equal to the number of time slots in the current day
+			var tempStructHolder = []weatherFormat{}
+			for i, _ := range timeSlots {
+				var tempStruct weatherFormat
+				tempStructHolder = append(tempStructHolder, tempStruct)
+				tempStructHolder[i].Date = strconv.Itoa(currentDateKey)
+			}
+			
 			// Get body and first row
 			tBody := tHead.NextSibling.NextSibling
 			curRow := tBody.FirstChild
@@ -97,46 +112,71 @@ func ParseHTML() (map[int]map[string]weatherFormat, [7]string) {
 						if curCell.Data == "td" { // If sibling is a cell
 							switch { // Parse according to row number
 							case curRowNum == 1: // Weather Symbol
-								fmt.Println("Currently in: 1 (Weather Symbol)")
-								fmt.Println(timeSlots[atWhichTime])
-								fmt.Println(curCell.FirstChild.NextSibling.Attr[3].Val)
+								tempStructHolder[atWhichTime].Time = timeSlots[atWhichTime]
+								tempStructHolder[atWhichTime].WeatherType = nameToWeatherNum[curCell.FirstChild.NextSibling.Attr[3].Val]
 							case curRowNum == 2: // Chance of Precipitation
-								fmt.Println("Currently in: 2 (Chance of rain)")
-								fmt.Println(timeSlots[atWhichTime])
-								fmt.Printf("%s\n", strings.Trim(curCell.FirstChild.Data, "\n"))
+								//fmt.Println("Currently in: 2 (Chance of rain)")
+								//fmt.Println(timeSlots[atWhichTime])
+								value, _ := strconv.Atoi(strings.Trim(
+									strings.Trim(strings.Trim(curCell.FirstChild.Data, "\n"), "%"), "<"))
+								tempStructHolder[atWhichTime].PrecipitationProbabilityInPercent = value
 							case curRowNum == 3: // Actual Temperature
-								fmt.Println("Currently in: 3 (Actual Temperature)")
-								fmt.Println(timeSlots[atWhichTime])
-								fmt.Printf("%s\n", curCell.FirstChild.NextSibling.Attr[0].Val)
+								//fmt.Println("Currently in: 3 (Actual Temperature)")
+								//fmt.Println(timeSlots[atWhichTime])
+								//fmt.Printf("%s\n", curCell.FirstChild.NextSibling.Attr[0].Val)
+								value, _ := strconv.ParseFloat(curCell.FirstChild.NextSibling.Attr[0].Val, 64)
+								valueInt := int(math.Round(value))
+								tempStructHolder[atWhichTime].TemperatureC = valueInt
 							case curRowNum == 4 : // Feels Like Temperature
-								fmt.Println("Currently in: 4 (Feels Like Temperature)")
-								fmt.Println(timeSlots[atWhichTime])
+								//fmt.Println("Currently in: 4 (Feels Like Temperature)")
+								//fmt.Println(timeSlots[atWhichTime])
+								var valueString string
 								if curCell.Attr[2].Key == "data-value" {
-									fmt.Println(curCell.Attr[2].Val)
+									valueString = curCell.Attr[2].Val
 								} else {
-									fmt.Println(curCell.Attr[1].Val)
+									valueString = curCell.Attr[1].Val
 								}
+								value, _ := strconv.ParseFloat(valueString, 64)
+								valueInt := int(math.Round(value))
+								tempStructHolder[atWhichTime].FeelsLikeTemperatureC = valueInt
 							case curRowNum == 5: // Wind direction and speed
-								fmt.Println("Currently in: 5 (Wind Direction and Speed)")
-								fmt.Println(timeSlots[atWhichTime])
-								fmt.Printf("%s\n", curCell.FirstChild.NextSibling.FirstChild.NextSibling.Attr[2].Val)
-								fmt.Printf("%s\n", strings.Trim(curCell.FirstChild.NextSibling.FirstChild.NextSibling.NextSibling.NextSibling.FirstChild.Data, "\n"))
+								//fmt.Println("Currently in: 5 (Wind Direction and Speed)")
+								//fmt.Println(timeSlots[atWhichTime])
+								tempStructHolder[atWhichTime].WindDirectionAbbreviation = curCell.FirstChild.NextSibling.FirstChild.NextSibling.Attr[2].Val
+								value, _ := strconv.Atoi(strings.Trim(curCell.FirstChild.NextSibling.FirstChild.NextSibling.NextSibling.NextSibling.FirstChild.Data, "\n"))
+								tempStructHolder[atWhichTime].WindSpeedMph = value
 							case curRowNum == 6: // Wind Gust
-								fmt.Println("Currently in: 6 (Wind Gust)")
-								fmt.Println(timeSlots[atWhichTime])
-								fmt.Printf("%s\n", curCell.FirstChild.NextSibling.FirstChild.Data)
+								//fmt.Println("Currently in: 6 (Wind Gust)")
+								//fmt.Println(timeSlots[atWhichTime])
+								value, _ := strconv.Atoi(curCell.FirstChild.NextSibling.FirstChild.Data)
+								tempStructHolder[atWhichTime].GustSpeedMph = value
 							case curRowNum == 7: // Visibility
-								fmt.Println("Currently in: 7 (Visibility)")
-								fmt.Println(timeSlots[atWhichTime])
-								fmt.Printf("%s\n", curCell.FirstChild.NextSibling.FirstChild.Data)
+								//fmt.Println("Currently in: 7 (Visibility)")
+								//fmt.Println(timeSlots[atWhichTime])
+								tempStructHolder[atWhichTime].Visibility = curCell.FirstChild.NextSibling.FirstChild.Data
 							case curRowNum == 8: // Humidity
-								fmt.Println("Currently in: 8 (Humidity)")
-								fmt.Println(timeSlots[atWhichTime])
-								fmt.Printf("%s\n", strings.Trim(curCell.FirstChild.Data, "\n"))
+								//fmt.Println("Currently in: 8 (Humidity)")
+								//fmt.Println(timeSlots[atWhichTime])
+								value, _ := strconv.Atoi(strings.Trim(strings.Trim(curCell.FirstChild.Data, "\n"), "%"))
+								tempStructHolder[atWhichTime].Humidity = value
 							case curRowNum == 9: // UV
-								fmt.Println("Currently in: 9 (UV)")
-								fmt.Println(timeSlots[atWhichTime])
-								fmt.Printf("%+v\n", curCell.FirstChild.NextSibling.Attr[4].Val)
+								//fmt.Println("Currently in: 9 (UV)")
+								//fmt.Println(timeSlots[atWhichTime])
+								//fmt.Printf("%+v\n", curCell.FirstChild.NextSibling.Attr[4].Val)
+							}
+							// Set time slot length correctly
+							if curRowNum == 1 {
+								if curDay == 1 || curDay == 2 { // Today and Tomorrow = per hour
+									tempStructHolder[atWhichTime].TimeslotLength = 1
+								} else if curDay > 3 { // 3 days away+ = per 3 hour
+									tempStructHolder[atWhichTime].TimeslotLength = 3
+								} else if curDay == 3 { // 2 days away = 3 hour except first (0000)
+									if timeSlots[atWhichTime] == "0000" {
+										tempStructHolder[atWhichTime].TimeslotLength = 1
+									} else {
+										tempStructHolder[atWhichTime].TimeslotLength = 1
+									}
+								}
 							}
 							atWhichTime++
 						}
@@ -144,6 +184,11 @@ func ParseHTML() (map[int]map[string]weatherFormat, [7]string) {
 					} 
 				}
 				curRow = curRow.NextSibling
+			}
+			//fmt.Printf("%+v\n", tempStructHolder[0])
+			for i, timeSlot := range timeSlots {
+				//fmt.Println(i, timeSlot)
+				finalJSON[currentDateKey][timeSlot] = tempStructHolder[i]
 			}
 		}
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
