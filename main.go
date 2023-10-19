@@ -7,6 +7,7 @@ import (
 	"strings"
 	"bufio"
 	"strconv"
+	"time"
 )
 
 
@@ -56,10 +57,14 @@ func main() {
 		bbcWeatherCode = locations[0][2]
 	}
 	fmt.Println(metofficeCode, bbcWeatherCode)
+	fmt.Println("Before Download:", time.Now())
 	metofficeHTML, bbcWeatherHTML := RetrieveHTML(metofficeCode, bbcWeatherCode)
+	fmt.Println("After Download:", time.Now())
 	
 	metofficeJSON, dayNames := GetMetOfficeFormatted(metofficeHTML)
+	fmt.Println("After MetOffice:", time.Now())
 	bbcWeatherJSON := GetBBCWeatherFormatted(bbcWeatherHTML)
+	fmt.Println("After BBC Weather:", time.Now())
 	/*
 	for _, day := range bbcWeatherJSON {
 		for _, timeSlot := range day {

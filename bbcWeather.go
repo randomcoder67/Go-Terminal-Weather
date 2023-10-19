@@ -21,6 +21,9 @@ func tidyJSON(inputJSON BBCWeatherFormat) map[int]map[string]weatherFormat {
 		// Iterate through all the time slots
 		for _, timeSlot := range day.Detailed.Reports {
 			// Get the current date in format yymmdd as an int
+			
+			// Glitch is here, since I moved to using an index instead of the date, it's putting the next day 0000-0500 into the current day
+			
 			//curDate, _ := strconv.Atoi(strings.ReplaceAll(timeSlot.LocalDate, "-", "")[2:])
 			// Get the current time in format HHMM as an int
 			curTime := timeSlot.Timeslot[0:2] + timeSlot.Timeslot[3:5]
@@ -87,5 +90,7 @@ func GetBBCWeatherFormatted(bbcWeatherHTML []byte) map[int]map[string]weatherFor
 		panic(err)
 	}
 	// Tidy the JSON up and return it to main
+	thing, _ := json.MarshalIndent(formattedJSON, "", "  ")
+	fmt.Println(string(thing))
 	return tidyJSON(formattedJSON)
 }

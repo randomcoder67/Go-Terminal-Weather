@@ -6,6 +6,8 @@ import (
 	"os"
 	"sort"
 	"strconv"
+	//"time"
+	//"encoding/json"
 )
 
 var curDay int = 0
@@ -76,7 +78,6 @@ func drawData(s tcell.Screen, weatherData map[int]map[string]weatherFormat, dayN
 				}
 			}
 		}
-			
 		
 		for _, timeSlot := range timeSlotsFinal {
 			curWeatherStruct := weatherData[curDay][timeSlot]
@@ -106,7 +107,7 @@ func drawData(s tcell.Screen, weatherData map[int]map[string]weatherFormat, dayN
 			drawText(s, 30+curTimeSlot*8, 6, 50+curTimeSlot*8, 20, precipColour, precipString)
 			
 			// Temperature
-			var tempInt int = curWeatherStruct.FeelsLikeTemperatureC
+			var tempInt int = curWeatherStruct.TemperatureC
 			var tempColour tcell.Style
 			if tempInt < 4 {
 				tempColour = styles["blue"]
@@ -220,6 +221,10 @@ func drawData(s tcell.Screen, weatherData map[int]map[string]weatherFormat, dayN
 	
 
 func DoDisplay(metofficeJSON map[int]map[string]weatherFormat, bbcWeatherJSON map[int]map[string]weatherFormat, dayNames [7]string) {
+
+	//thing, _ := json.MarshalIndent(bbcWeatherJSON, "", "  ")
+	//fmt.Println(string(thing))
+
 	fmt.Println("In display.go")
 	
 	var weatherData = [2]map[int]map[string]weatherFormat{metofficeJSON, bbcWeatherJSON}
@@ -256,8 +261,10 @@ func DoDisplay(metofficeJSON map[int]map[string]weatherFormat, bbcWeatherJSON ma
 	drawData(s, weatherData[currentForecast], dayNames)
 	termWidth, termHeight = s.Size()
 	
+	//thing := time.Now()
 	quit := func() {
 		s.Fini()
+		//fmt.Println("After Display Setup:", thing)
 		os.Exit(0)
 	}
 	for {
